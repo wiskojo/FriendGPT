@@ -3,8 +3,10 @@ import os
 from collections import deque
 
 import discord
+from discord import Message
 from discord.ext import commands
 from dotenv import load_dotenv
+from langchain.schema import AIMessage, BaseMessage, HumanMessage
 
 from chat import generate_response, update_response
 
@@ -13,9 +15,9 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="/", intents=intents)
 
-DELAY = 5
+DELAY = 10
 message_deque = deque()
 history_deque = deque()
 processing_scheduled = False
@@ -38,18 +40,29 @@ async def process_chat(chat_channel):
             message_deque.clear()
             if new_messages:
                 updated_should_respond, updated_response = update_response(
-                    list(history_deque), messages, new_messages
+                    list(history_deque), messages, updated_response, new_messages
                 )
                 messages.extend(new_messages)
             else:
                 break
 
         if updated_response:
-            await chat_channel.send(updated_response)
+            for ai_message in updated_response:
+                await chat_channel.send(ai_message.content)
             history_deque.extend(messages)
-            history_deque.append(updated_response)
+            history_deque.extend(updated_response)
 
     processing_scheduled = False
+
+
+def discord_to_langchain_message(message: Message, bot: commands.Bot) -> BaseMessage:
+    def format_message_content(message: Message) -> str:
+        return message.content
+
+    if message.author == bot.user:
+        return AIMessage(content=format_message_content(message))
+    else:
+        return HumanMessage(content=format_message_content(message))
 
 
 @bot.event
@@ -58,15 +71,10 @@ async def on_ready():
 
 
 @bot.event
-async def on_message(message):
+async def on_message(message: Message):
     global processing_scheduled
 
-    if message.attachments:
-        content = f"{message.content}\n{message.attachments[0].url}"
-    else:
-        content = message.content
-
-    message_deque.append(content)
+    message_deque.append(discord_to_langchain_message(message, bot))
 
     if message.author == bot.user:
         return
