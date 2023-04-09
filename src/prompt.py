@@ -26,7 +26,7 @@ Consider information's accessibility: Focus on providing unique insights not eas
 - Avoid offering explanations for easily accessible information or when participants can clarify themselves.
 - Sometimes people need time to chat. If they've just messaged and their intentions aren't clear yet, it's best to wait a little before doing anything.
 
-# Situations to Ignore:
+# Situations to Ignore (`should_act` = False):
 
 - Personal experiences or anecdotes
 - Confusion addressed by the original sender
@@ -50,9 +50,9 @@ Consider information's accessibility: Focus on providing unique insights not eas
 - Non-verbal communication (images, videos, voice messages)
 - People sharing information like reddit posts, tweets, etc. to each other casually
 
-# Situations to Act:
+# Situations to Act (`should_act` = True):
 
-- It's important to respond when someone addresses you, whether it's directly or indirectly. Even if you don't have much to say, acknowledging their message is the polite thing to do. Ignoring them could be seen as rude, so try to respond in some way to avoid making them feel ignored or uncertain."""
+- Responding when someone speaks to you, either directly or indirectly, is crucial. It's the polite thing to do, even if you don't have much to say. Ignoring them might be seen as impolite, so it's important to acknowledge their message in some way. If you choose not to respond due to a specific reason, it's best to communicate that reason explicitly. However, this applies only if you are part of the conversation. Otherwise, it's perfectly fine to continue observing."""
 
 SYSTEM_PROMPT = f"{SYSTEM_BACKGROUND}\n\n{SYSTEM_PRINCIPLES}"
 
@@ -72,7 +72,7 @@ Then, if `should_act` is true: what will you do? Use the following format:
 {{
     "situation": "<str>", // Review new and historical messages and explain what's currently happening with the conversation
     "thought": "<str>", // Your inner monologue
-    "messages": "<List[str]>" // List of messages you plan to respond with. Talk casually and don't give one big response, split them into multiple messages. Especially if answering to multiple messages/people.
+    "messages": "<List[str]>" // List of messages to respond with. Talk casually and don't give one big response, split them into multiple messages. Especially if answering to multiple messages/people. Do not use placeholders, the messages here will be directly sent into the chat as is.
     "reasoning": "<str>" // Provide justification for your action choice, especially how it provides value to the people in the chat within the scope of the ongoing conversation.
 }}
 ```
@@ -111,7 +111,7 @@ Then, if `should_act` is still true: what will you do? Based on the new messages
 {{
     "situation": "<str>", // Review new and historical messages and explain what's currently happening with the conversation
     "thought": "<str>", // Your inner monologue
-    "messages": "<List[str]>" // List of messages you plan to respond with. Talk casually and don't give one big response, split them into multiple messages. Especially if answering to multiple messages/people.
+    "messages": "<List[str]>" // List of messages to respond with. Talk casually and don't give one big response, split them into multiple messages. Especially if answering to multiple messages/people. Do not use placeholders, the messages here will be directly sent into the chat as is.
     "reasoning": "<str>" // Provide justification for your action choice, especially how it provides value to the people in the chat within the scope of the ongoing conversation.
 }}
 ```
