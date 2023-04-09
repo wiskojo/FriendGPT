@@ -61,15 +61,16 @@ async def on_ready():
 async def on_message(message):
     global processing_scheduled
 
-    if message.author == bot.user:
-        return
-
     if message.attachments:
         content = f"{message.content}\n{message.attachments[0].url}"
     else:
         content = message.content
 
     message_deque.append(content)
+
+    if message.author == bot.user:
+        return
+
     if not processing_scheduled:
         processing_scheduled = True
         await process_chat(message.channel)
