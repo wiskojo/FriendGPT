@@ -62,7 +62,7 @@ async def update_response(
     response: List[AIMessage],
     new_messages: List[BaseMessage],
 ) -> Tuple[bool, List[AIMessage]]:
-    update_chain = get_chatgpt_chain(UPDATE_PROMPT)
+    update_chain = get_chatgpt_chain(UPDATE_PROMPT, model_name="gpt-3.5-turbo")
     output = await update_chain.apredict(
         nickname=COMPANION_NICKNAME,
         history=history,

@@ -17,7 +17,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-DELAY = 10
+DELAY = 5
 message_deque = deque()
 history_deque = deque(maxlen=30)
 processing_scheduled = False
