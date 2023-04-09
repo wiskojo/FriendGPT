@@ -45,28 +45,30 @@ def parse_output(output: str) -> Tuple[bool, List[str]]:
     return should_act, messages
 
 
-def generate_response(
+async def generate_response(
     history: List[BaseMessage], messages: List[BaseMessage]
 ) -> Tuple[bool, List[AIMessage]]:
     response_chain = get_chatgpt_chain(RESPONSE_PROMPT)
-    output = response_chain.predict(
+    output = await response_chain.apredict(
         nickname=COMPANION_NICKNAME, history=history, messages=messages
     )
+    print(output)
     return parse_output(output)
 
 
-def update_response(
+async def update_response(
     history: List[BaseMessage],
     messages: List[BaseMessage],
     response: List[AIMessage],
     new_messages: List[BaseMessage],
 ) -> Tuple[bool, List[AIMessage]]:
     update_chain = get_chatgpt_chain(UPDATE_PROMPT)
-    output = update_chain.predict(
+    output = await update_chain.apredict(
         nickname=COMPANION_NICKNAME,
         history=history,
         messages=messages,
         response=response,
         new_messages=new_messages,
     )
+    print(output)
     return parse_output(output)

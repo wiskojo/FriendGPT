@@ -19,7 +19,7 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 
 DELAY = 10
 message_deque = deque()
-history_deque = deque()
+history_deque = deque(maxlen=30)
 processing_scheduled = False
 
 
@@ -31,7 +31,7 @@ async def process_chat(chat_channel):
     messages = list(message_deque)
     message_deque.clear()
 
-    should_respond, response = generate_response(list(history_deque), messages)
+    should_respond, response = await generate_response(list(history_deque), messages)
     if should_respond:
         updated_should_respond = True
         updated_response = response
@@ -39,7 +39,7 @@ async def process_chat(chat_channel):
             new_messages = list(message_deque)
             message_deque.clear()
             if new_messages:
-                updated_should_respond, updated_response = update_response(
+                updated_should_respond, updated_response = await update_response(
                     list(history_deque), messages, updated_response, new_messages
                 )
                 messages.extend(new_messages)
@@ -55,14 +55,47 @@ async def process_chat(chat_channel):
     processing_scheduled = False
 
 
-def discord_to_langchain_message(message: Message, bot: commands.Bot) -> BaseMessage:
-    def format_message_content(message: Message) -> str:
-        return message.content
+async def discord_to_langchain_message(
+    message: Message, bot: commands.Bot
+) -> BaseMessage:
+    async def format_message_content(message: Message) -> str:
+        author = message.author.display_name
+        timestamp = message.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+        content = f"{author} ({timestamp}): {message.content}"
+
+        if message.reference:
+            try:
+                replied_message = await message.channel.fetch_message(
+                    message.reference.message_id
+                )
+                replied_author = replied_message.author.display_name
+                replied_content = replied_message.content
+                content += f"\n> In reply to {replied_author}: {replied_content}"
+            except:
+                content += "\n> In reply to a deleted message"
+
+        if message.attachments:
+            attachments = []
+            for attachment in message.attachments:
+                attachments.append(f"Attachment: {attachment.url}")
+            attachments_str = "\n".join(attachments)
+            content += f"\n{attachments_str}"
+
+        if message.embeds:
+            embeds = []
+            for embed in message.embeds:
+                embeds.append(f"Embed: {embed.title or ''} - {embed.description or ''}")
+            embeds_str = "\n".join(embeds)
+            content += f"\n{embeds_str}"
+
+        return content
 
     if message.author == bot.user:
-        return AIMessage(content=format_message_content(message))
+        return AIMessage(content=message.content)
     else:
-        return HumanMessage(content=format_message_content(message))
+        formatted_message = await format_message_content(message)
+        return HumanMessage(content=formatted_message)
 
 
 @bot.event
@@ -74,10 +107,11 @@ async def on_ready():
 async def on_message(message: Message):
     global processing_scheduled
 
-    message_deque.append(discord_to_langchain_message(message, bot))
-
     if message.author == bot.user:
         return
+
+    message_ = await discord_to_langchain_message(message, bot)
+    message_deque.append(message_)
 
     if not processing_scheduled:
         processing_scheduled = True
