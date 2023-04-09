@@ -28,29 +28,37 @@ async def process_chat(chat_channel):
 
     await asyncio.sleep(DELAY)
 
-    messages = list(message_deque)
-    message_deque.clear()
+    messages = []
+    while message_deque:
+        messages.append(message_deque.popleft())
 
     should_respond, response = await generate_response(list(history_deque), messages)
+    history_deque.extend(messages)
+
     if should_respond:
         updated_should_respond = True
         updated_response = response
-        while updated_should_respond:
-            new_messages = list(message_deque)
-            message_deque.clear()
-            if new_messages:
-                updated_should_respond, updated_response = await update_response(
-                    list(history_deque), messages, updated_response, new_messages
-                )
-                messages.extend(new_messages)
-            else:
-                break
+        while message_deque:
+            new_messages = []
+            while message_deque:
+                new_messages.append(message_deque.popleft())
 
-        if updated_response:
+            updated_should_respond, updated_response = await update_response(
+                list(history_deque), messages, updated_response, new_messages
+            )
+            messages.extend(new_messages)
+            history_deque.extend(new_messages)
+
+        if updated_should_respond and updated_response:
             for ai_message in updated_response:
                 await chat_channel.send(ai_message.content)
-            history_deque.extend(messages)
-            history_deque.extend(updated_response)
+                history_deque.append(ai_message)
+
+    else:
+        if should_respond and response:
+            for ai_message in response:
+                await chat_channel.send(ai_message.content)
+                history_deque.append(ai_message)
 
     processing_scheduled = False
 
