@@ -20,9 +20,9 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 DELAY = 5
 CHAT_MAX_LEN = 30
 
-message_deque = deque()
-history_deque = deque(maxlen=CHAT_MAX_LEN)
-processing_scheduled = False
+message_deques = {}
+history_deques = {}
+processing_scheduled = {}
 backfilled_channels = set()
 
 
@@ -32,38 +32,43 @@ async def process_chat(chat_channel):
     await asyncio.sleep(DELAY)
 
     messages = []
-    while message_deque:
-        messages.append(message_deque.popleft())
+    while message_deques[chat_channel.id]:
+        messages.append(message_deques[chat_channel.id].popleft())
 
-    should_respond, response = await generate_response(list(history_deque), messages)
-    history_deque.extend(messages)
+    should_respond, response = await generate_response(
+        list(history_deques[chat_channel.id]), messages
+    )
+    history_deques[chat_channel.id].extend(messages)
 
     if should_respond:
         updated_should_respond = True
         updated_response = response
-        while message_deque:
+        while message_deques[chat_channel.id]:
             new_messages = []
-            while message_deque:
-                new_messages.append(message_deque.popleft())
+            while message_deques[chat_channel.id]:
+                new_messages.append(message_deques[chat_channel.id].popleft())
 
             updated_should_respond, updated_response = await update_response(
-                list(history_deque), messages, updated_response, new_messages
+                list(history_deques[chat_channel.id]),
+                messages,
+                updated_response,
+                new_messages,
             )
             messages.extend(new_messages)
-            history_deque.extend(new_messages)
+            history_deques[chat_channel.id].extend(new_messages)
 
         if updated_should_respond and updated_response:
             for ai_message in updated_response:
                 await chat_channel.send(ai_message.content)
-                history_deque.append(ai_message)
+                history_deques[chat_channel.id].append(ai_message)
 
     else:
         if should_respond and response:
             for ai_message in response:
                 await chat_channel.send(ai_message.content)
-                history_deque.append(ai_message)
+                history_deques[chat_channel.id].append(ai_message)
 
-    processing_scheduled = False
+    processing_scheduled[chat_channel.id] = False
 
 
 async def discord_to_langchain_message(
@@ -116,7 +121,7 @@ async def backfill_chat(channel, limit=CHAT_MAX_LEN):
         message_ = await discord_to_langchain_message(message, bot)
         backfilled_messages.append(message_)
 
-    history_deque.extend(
+    history_deques[channel.id].extend(
         backfilled_messages[::-1][:-1]
     )  # Reverse the order to maintain chronological order
 
@@ -133,14 +138,22 @@ async def on_message(message: Message):
     if message.author == bot.user:
         return
 
-    message_ = await discord_to_langchain_message(message, bot)
-    message_deque.append(message_)
+    if message.channel.id not in message_deques:
+        message_deques[message.channel.id] = deque()
+        history_deques[message.channel.id] = deque(maxlen=CHAT_MAX_LEN)
+        processing_scheduled[message.channel.id] = False
 
-    if not processing_scheduled:
-        processing_scheduled = True
+    message_ = await discord_to_langchain_message(message, bot)
+    message_deques[message.channel.id].append(message_)
+
+    if not processing_scheduled[message.channel.id]:
+        processing_scheduled[message.channel.id] = True
 
         # Backfill channel messages
-        if not history_deque and message.channel.id not in backfilled_channels:
+        if (
+            not history_deques[message.channel.id]
+            and message.channel.id not in backfilled_channels
+        ):
             await backfill_chat(message.channel)
             backfilled_channels.add(message.channel.id)
 
