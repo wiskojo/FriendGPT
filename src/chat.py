@@ -1,7 +1,7 @@
-import json
 import re
 from typing import List, Tuple
 
+import json5
 from langchain import LLMChain
 from langchain.chat_models.openai import ChatOpenAI
 from langchain.schema import AIMessage, BaseMessage
@@ -11,7 +11,7 @@ from prompt import RESPONSE_PROMPT, UPDATE_PROMPT
 COMPANION_NICKNAME = "4"
 
 
-def get_chatgpt_chain(prompt, model_name="gpt-4", temperature=0, verbose=True):
+def get_chatgpt_chain(prompt, model_name="gpt-3.5-turbo", temperature=0, verbose=True):
     chain = LLMChain(
         llm=ChatOpenAI(model_name=model_name, temperature=temperature),
         prompt=prompt,
@@ -24,12 +24,12 @@ def parse_output(output: str) -> Tuple[bool, List[str]]:
     should_act = False
     messages = []
 
-    # Extract JSON strings enclosed by triple backticks
-    json_strings = re.findall(r"```json(.*?)```", output, re.DOTALL)
+    # Extract JSON strings enclosed by triple backticks or not enclosed
+    json_strings = re.findall(r"(```json)?\s*(\{.*?\})\s*(```)?", output, re.DOTALL)
 
-    for json_str in json_strings:
+    for json_str_tuple in json_strings:
         # Load the JSON string as a Python dictionary
-        json_dict = json.loads(json_str.strip())
+        json_dict = json5.loads(json_str_tuple[1].strip())
 
         # Check if the dictionary has the "should_act" key and update should_act accordingly
         if "should_act" in json_dict:
@@ -62,7 +62,7 @@ async def update_response(
     response: List[AIMessage],
     new_messages: List[BaseMessage],
 ) -> Tuple[bool, List[AIMessage]]:
-    update_chain = get_chatgpt_chain(UPDATE_PROMPT, model_name="gpt-3.5-turbo")
+    update_chain = get_chatgpt_chain(UPDATE_PROMPT)
     output = await update_chain.apredict(
         nickname=COMPANION_NICKNAME,
         history=history,
