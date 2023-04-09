@@ -11,7 +11,7 @@ from prompt import RESPONSE_PROMPT, UPDATE_PROMPT
 FRIEND_NICKNAME = "GPT"
 
 
-def get_chatgpt_chain(prompt, model_name="gpt-3.5-turbo", temperature=0, verbose=True):
+def get_chatgpt_chain(prompt, model_name="gpt-4", temperature=0, verbose=True):
     chain = LLMChain(
         llm=ChatOpenAI(model_name=model_name, temperature=temperature),
         prompt=prompt,
