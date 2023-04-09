@@ -18,9 +18,12 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
 DELAY = 5
+CHAT_MAX_LEN = 30
+
 message_deque = deque()
-history_deque = deque(maxlen=30)
+history_deque = deque(maxlen=CHAT_MAX_LEN)
 processing_scheduled = False
+backfilled_channels = set()
 
 
 async def process_chat(chat_channel):
@@ -106,6 +109,18 @@ async def discord_to_langchain_message(
         return HumanMessage(content=formatted_message)
 
 
+async def backfill_chat(channel, limit=CHAT_MAX_LEN):
+    backfilled_messages = []
+
+    async for message in channel.history(limit=limit + 1):
+        message_ = await discord_to_langchain_message(message, bot)
+        backfilled_messages.append(message_)
+
+    history_deque.extend(
+        backfilled_messages[::-1][:-1]
+    )  # Reverse the order to maintain chronological order
+
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} has connected to Discord!")
@@ -123,6 +138,12 @@ async def on_message(message: Message):
 
     if not processing_scheduled:
         processing_scheduled = True
+
+        # Backfill channel messages
+        if not history_deque and message.channel.id not in backfilled_channels:
+            await backfill_chat(message.channel)
+            backfilled_channels.add(message.channel.id)
+
         await process_chat(message.channel)
 
     await bot.process_commands(message)
