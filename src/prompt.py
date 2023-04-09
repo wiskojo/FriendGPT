@@ -89,7 +89,7 @@ RESPONSE_PROMPT = ChatPromptTemplate(
     input_variables=["nickname", "history", "messages"], messages=RESPONSE_MESSAGES
 )
 
-UPDATE_SUFFIX = """First determine: should you still act? Use the following format:
+UPDATE_SUFFIX = """First determine: should you still act given the new message you just received? Use the following format:
 
 ```json
 {{
@@ -99,7 +99,7 @@ UPDATE_SUFFIX = """First determine: should you still act? Use the following form
 }}
 ```
 
-Then, if `should_act` is still true: what will you do? Based on the new messages will you be making any revisions? Use the following format:
+Then, if `should_act` is still true: what will you do? Based on the new messages you received will you be making any revisions? Use the following format:
 
 ```json
 {{
@@ -130,7 +130,7 @@ UPDATE_MESSAGES = [
         "But by the time you finished thinking up your response, these new messages have appeared:"
     ),
     MessagesPlaceholder(variable_name="new_messages"),
-    SystemMessagePromptTemplate.from_template(SUFFIX),
+    SystemMessagePromptTemplate.from_template(UPDATE_SUFFIX),
 ]
 UPDATE_PROMPT = ChatPromptTemplate(
     input_variables=["nickname", "history", "messages", "response", "new_messages"],
