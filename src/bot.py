@@ -13,12 +13,11 @@ from chat import generate_response, update_response
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
+RESPONSE_DELAY = int(os.getenv("RESPONSE_DELAY"))
+CHAT_MAX_LEN = int(os.getenv("CHAT_MAX_LEN"))
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
-
-DELAY = 5
-CHAT_MAX_LEN = 30
 
 message_deques = {}
 history_deques = {}
@@ -29,7 +28,7 @@ backfilled_channels = set()
 async def process_chat(chat_channel):
     global processing_scheduled
 
-    await asyncio.sleep(DELAY)
+    await asyncio.sleep(RESPONSE_DELAY)
 
     messages = []
     while message_deques[chat_channel.id]:

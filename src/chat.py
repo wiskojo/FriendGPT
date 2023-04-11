@@ -1,17 +1,22 @@
+import os
 import re
 from typing import List, Tuple
 
 import json5
+from dotenv import load_dotenv
 from langchain import LLMChain
 from langchain.chat_models.openai import ChatOpenAI
 from langchain.schema import AIMessage, BaseMessage
 
 from prompt import RESPONSE_PROMPT, UPDATE_PROMPT
 
-FRIEND_NICKNAME = "GPT"
+load_dotenv()
+
+FRIEND_NICKNAME = os.getenv("FRIEND_NICKNAME")
+MODEL_NAME = os.getenv("MODEL_NAME")
 
 
-def get_chatgpt_chain(prompt, model_name="gpt-4", temperature=0, verbose=True):
+def get_chatgpt_chain(prompt, model_name=MODEL_NAME, temperature=0, verbose=True):
     chain = LLMChain(
         llm=ChatOpenAI(model_name=model_name, temperature=temperature),
         prompt=prompt,
