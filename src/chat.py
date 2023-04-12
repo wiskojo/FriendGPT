@@ -12,7 +12,7 @@ from prompt import RESPONSE_PROMPT, UPDATE_PROMPT
 
 load_dotenv()
 
-FRIEND_NICKNAME = os.getenv("FRIEND_NICKNAME")
+FRIEND_NAME = os.getenv("FRIEND_NAME")
 MODEL_NAME = os.getenv("MODEL_NAME")
 
 
@@ -55,7 +55,7 @@ async def generate_response(
 ) -> Tuple[bool, List[AIMessage]]:
     response_chain = get_chatgpt_chain(RESPONSE_PROMPT)
     output = await response_chain.apredict(
-        nickname=FRIEND_NICKNAME, history=history, messages=messages
+        name=FRIEND_NAME, history=history, messages=messages
     )
     print(output)
     return parse_output(output)
@@ -69,7 +69,7 @@ async def update_response(
 ) -> Tuple[bool, List[AIMessage]]:
     update_chain = get_chatgpt_chain(UPDATE_PROMPT)
     output = await update_chain.apredict(
-        nickname=FRIEND_NICKNAME,
+        name=FRIEND_NAME,
         history=history,
         messages=messages,
         response=response,
