@@ -1,13 +1,16 @@
 import asyncio
 import os
+import re
 from collections import deque
+from typing import List
 
 import discord
 from discord import Message
 from discord.ext import commands
 from dotenv import load_dotenv
-from langchain.schema import AIMessage, BaseMessage, HumanMessage
+from langchain.schema import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from browse import summarize_link
 from chat import generate_response, update_response
 
 load_dotenv()
@@ -25,6 +28,36 @@ processing_scheduled = {}
 backfilled_channels = set()
 
 
+async def process_new_messages(messages: List[BaseMessage]) -> List[BaseMessage]:
+    processed_messages = []
+
+    for message in messages:
+        # Check for links in the message and generate a summarized system message if necessary
+        links = re.findall(
+            r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+            message.content,
+        )
+        if links:
+            summarized_texts = await asyncio.gather(
+                *[summarize_link(link) for link in links]
+            )
+            summarized_message_content = (
+                "Here's a summary of the link(s) in the messages:\n"
+                + "\n\n".join(
+                    [
+                        f"{link}\n{summary}"
+                        for link, summary in zip(links, summarized_texts)
+                    ]
+                )
+            )
+            system_message = SystemMessage(content=summarized_message_content)
+            processed_messages.append(system_message)
+
+        processed_messages.append(message)
+
+    return processed_messages
+
+
 async def process_chat(chat_channel):
     global processing_scheduled
 
@@ -33,11 +66,12 @@ async def process_chat(chat_channel):
     messages = []
     while message_deques[chat_channel.id]:
         messages.append(message_deques[chat_channel.id].popleft())
+    processed_messages = await process_new_messages(messages)
 
     should_respond, response = await generate_response(
-        list(history_deques[chat_channel.id]), messages
+        list(history_deques[chat_channel.id]), processed_messages
     )
-    history_deques[chat_channel.id].extend(messages)
+    history_deques[chat_channel.id].extend(processed_messages)
 
     if should_respond:
         updated_should_respond = True
@@ -46,15 +80,16 @@ async def process_chat(chat_channel):
             new_messages = []
             while message_deques[chat_channel.id]:
                 new_messages.append(message_deques[chat_channel.id].popleft())
+            processed_new_messages = await process_new_messages(new_messages)
 
             updated_should_respond, updated_response = await update_response(
                 list(history_deques[chat_channel.id]),
                 messages,
                 updated_response,
-                new_messages,
+                processed_new_messages,
             )
-            messages.extend(new_messages)
-            history_deques[chat_channel.id].extend(new_messages)
+            messages.extend(processed_new_messages)
+            history_deques[chat_channel.id].extend(processed_new_messages)
 
         if updated_should_respond and updated_response:
             for ai_message in updated_response:
