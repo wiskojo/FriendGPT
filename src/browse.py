@@ -1,4 +1,5 @@
 import asyncio
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 from langchain import PromptTemplate
@@ -31,12 +32,21 @@ async def scrape_text(url):
             for script in soup(["script", "style"]):
                 script.extract()
 
-            text = soup.get_text()
-            lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            text = "\n".join(chunk for chunk in chunks if chunk)
+            interleaved_content = []
 
-            return text
+            for element in soup.recursiveChildGenerator():
+                if element.name == "img" and "src" in element.attrs:
+                    img_src = urljoin(url, element["src"])
+                    interleaved_content.append(f"\n\nImage: {img_src}\n\n")
+                elif element.name is None and element.string:
+                    # If it's a NavigableString and not a tag, we have some text content
+                    text = element.string.strip()
+                    if text:
+                        interleaved_content.append(text)
+
+            interleaved_text = "\n".join(interleaved_content)
+
+            return interleaved_text
         finally:
             await browser.close()
 
