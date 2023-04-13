@@ -18,7 +18,9 @@ MODEL_NAME = os.getenv("MODEL_NAME")
 
 def get_chatgpt_chain(prompt, model_name=MODEL_NAME, temperature=0, verbose=True):
     chain = LLMChain(
-        llm=ChatOpenAI(model_name=model_name, temperature=temperature),
+        llm=ChatOpenAI(
+            model_name=model_name, temperature=temperature, request_timeout=120
+        ),
         prompt=prompt,
         verbose=verbose,
     )
