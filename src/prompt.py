@@ -50,7 +50,7 @@ SUFFIX = """First determine: should you act? Use the following format:
 
 ```json
 {{
-    "should_act": "<true | false>", // Indicate whether you should act or not
+    "should_act": "<bool>", // Indicate whether you should act or not
     "certainty": "<int>", // Show how sure you are (0-100)
     "reasoning": "<str>" // Explain why you made that decision
 }}
@@ -87,8 +87,8 @@ UPDATE_SUFFIX = """First determine: should you still act given the new message y
 
 ```json
 {{
-    "should_act": "<true | false>", // Indicate whether given these new message(s) you should still act or not
-    "should_send" "<true | false>", // Indicate if deciding to act, should the previously planned messages still be sent? This is appropriate for when you simply want to append new messages rather than entirely modify its content. Should be false if the planned messages are no longer relevant, needed, or is now outdated given the new messages received.
+    "should_act": "<bool>", // Indicate whether given these new message(s) you should still act or not
+    "should_send" "<bool>", // Indicate if deciding to act, should the previously planned messages still be sent? This is appropriate for when you simply want to append new messages rather than entirely modify its content. Should be false if the planned messages are no longer relevant, needed, or is now outdated given the new messages received.
     "certainty": "<int>", // Show how sure you are (0-100)
     "reasoning": "<str>" // Explain why you made that decision
 }}

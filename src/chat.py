@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import json5
 from dotenv import load_dotenv
@@ -28,6 +28,9 @@ def get_chatgpt_chain(prompt, model_name=MODEL_NAME, temperature=0, verbose=True
 
 
 def parse_output(output: str) -> Tuple[bool, bool, List[str]]:
+    def parse_bool(value: Any) -> bool:
+        return str(value).lower() == "true"
+
     should_act = False
     should_send = False
     messages = []
@@ -37,9 +40,9 @@ def parse_output(output: str) -> Tuple[bool, bool, List[str]]:
     for json_str_tuple in json_strings:
         json_dict = json5.loads(json_str_tuple[1].strip())
         if "should_act" in json_dict:
-            should_act = json_dict["should_act"]
+            should_act = parse_bool(json_dict["should_act"])
         if "should_send" in json_dict:
-            should_send = json_dict["should_send"]
+            should_send = parse_bool(json_dict["should_send"])
         if "messages" in json_dict:
             messages.extend(json_dict["messages"])
 
