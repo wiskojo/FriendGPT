@@ -25,29 +25,25 @@ def get_chatgpt_chain(prompt, model_name=MODEL_NAME, temperature=0, verbose=True
     return chain
 
 
-def parse_output(output: str) -> Tuple[bool, List[str]]:
+def parse_output(output: str) -> Tuple[bool, bool, List[str]]:
     should_act = False
+    should_send = False
     messages = []
 
-    # Extract JSON strings enclosed by triple backticks or not enclosed
     json_strings = re.findall(r"(```json)?\s*(\{.*?\})\s*(```)?", output, re.DOTALL)
 
     for json_str_tuple in json_strings:
-        # Load the JSON string as a Python dictionary
         json_dict = json5.loads(json_str_tuple[1].strip())
-
-        # Check if the dictionary has the "should_act" key and update should_act accordingly
         if "should_act" in json_dict:
             should_act = json_dict["should_act"]
-
-        # Check if the dictionary has the "messages" key and update messages accordingly
+        if "should_send" in json_dict:
+            should_send = json_dict["should_send"]
         if "messages" in json_dict:
             messages.extend(json_dict["messages"])
 
-    # Convert to AIMessage
     messages = [AIMessage(content=message) for message in messages]
 
-    return should_act, messages
+    return should_act, should_send, messages
 
 
 async def generate_response(

@@ -70,14 +70,12 @@ Then, if `should_act` is true: what will you do? Use the following format:
 
 ```json
 {{
-    "situation": "<str>", // Review new and historical messages and explain what's currently happening with the conversation
     "thought": "<str>", // Your inner monologue
-    "messages": "<List[str]>" // List of messages to respond with. Talk casually and don't give one big response, split them into multiple messages. Especially if answering to multiple messages/people. Do not use placeholders, the messages here will be directly sent into the chat as is.
-    "reasoning": "<str>" // Provide justification for your action choice, especially how it provides value to the people in the chat within the scope of the ongoing conversation.
+    "messages": "<List[str]>" // List of messages to respond with.
 }}
 ```
 
-Your answer should include up to 2 JSONs parsable via python's json.loads within Markdown blocks. If you want to take multiple actions, state so in the `action`."""
+Your answer should include up to 2 JSONs parsable via python's json.loads within Markdown blocks."""
 
 RESPONSE_MESSAGES = [
     SystemMessagePromptTemplate.from_template(FRIEND_PROMPT),
@@ -100,23 +98,22 @@ UPDATE_SUFFIX = """First determine: should you still act given the new message y
 ```json
 {{
     "should_act": "<bool>", // Indicate whether given these new message(s) you should still act or not
+    "should_send" "<bool>", // Indicate if deciding to act, should the previously planned messages still be sent? This is appropriate for when you simply want to append new messages rather than entirely modify its content.
     "certainty": "<int>", // Show how sure you are (0-100)
     "reasoning": "<str>" // Explain why you made that decision
 }}
 ```
 
-Then, if `should_act` is still true: what will you do? Based on the new messages you received will you be making any revisions? Use the following format:
+Then, if `should_act` is still true: what will you do? Based on the new messages you received will you be making any revisions? Consider `should_send` as well. If `should_send` is true your previous messages will be sent, you don't need to duplicate its content. Use the following format:
 
 ```json
 {{
-    "situation": "<str>", // Review new and historical messages and explain what's currently happening with the conversation
     "thought": "<str>", // Your inner monologue
-    "messages": "<List[str]>" // List of messages to respond with. Talk casually and don't give one big response, split them into multiple messages. Especially if answering to multiple messages/people. Do not use placeholders, the messages here will be directly sent into the chat as is.
-    "reasoning": "<str>" // Provide justification for your action choice, especially how it provides value to the people in the chat within the scope of the ongoing conversation.
+    "messages": "<List[str]>" // List of messages to respond with.
 }}
 ```
 
-Your answer should include up to 2 JSONs parsable via python's json.loads within Markdown blocks. If you want to take multiple actions, state so in the `action`."""
+Your answer should include up to 2 JSONs parsable via python's json.loads within Markdown blocks."""
 
 UPDATE_MESSAGES = [
     SystemMessagePromptTemplate.from_template(FRIEND_BACKGROUND),

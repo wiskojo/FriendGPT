@@ -32,6 +32,8 @@ async def process_new_messages(messages: List[BaseMessage]) -> List[BaseMessage]
     processed_messages = []
 
     for message in messages:
+        processed_messages.append(message)
+
         # Check for links in the message and generate a summarized system message if necessary
         links = re.findall(
             r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
@@ -53,12 +55,16 @@ async def process_new_messages(messages: List[BaseMessage]) -> List[BaseMessage]
             system_message = SystemMessage(content=summarized_message_content)
             processed_messages.append(system_message)
 
-        processed_messages.append(message)
-
     return processed_messages
 
 
 async def process_chat(chat_channel):
+    async def respond(should_respond: bool, response: List[AIMessage]):
+        if should_respond and response:
+            for ai_message in response:
+                await chat_channel.send(ai_message.content)
+                history_deques[chat_channel.id].append(ai_message)
+
     global processing_scheduled
 
     await asyncio.sleep(RESPONSE_DELAY)
@@ -68,39 +74,43 @@ async def process_chat(chat_channel):
         messages.append(message_deques[chat_channel.id].popleft())
     processed_messages = await process_new_messages(messages)
 
-    should_respond, response = await generate_response(
+    should_respond, _, response = await generate_response(
         list(history_deques[chat_channel.id]), processed_messages
     )
     history_deques[chat_channel.id].extend(processed_messages)
 
-    if should_respond:
-        updated_should_respond = True
-        updated_response = response
+    if not message_deques[chat_channel.id]:
+        await respond(should_respond, response)
+        processing_scheduled[chat_channel.id] = False
+        return
+
+    updated_should_respond = True
+    updated_response = response
+    prev_response = None
+
+    while message_deques[chat_channel.id]:
+        new_messages = []
         while message_deques[chat_channel.id]:
-            new_messages = []
-            while message_deques[chat_channel.id]:
-                new_messages.append(message_deques[chat_channel.id].popleft())
-            processed_new_messages = await process_new_messages(new_messages)
+            new_messages.append(message_deques[chat_channel.id].popleft())
+        processed_new_messages = await process_new_messages(new_messages)
 
-            updated_should_respond, updated_response = await update_response(
-                list(history_deques[chat_channel.id]),
-                messages,
-                updated_response,
-                processed_new_messages,
-            )
-            messages.extend(processed_new_messages)
-            history_deques[chat_channel.id].extend(processed_new_messages)
+        prev_response = updated_response
+        (
+            updated_should_respond,
+            updated_should_send,
+            updated_response,
+        ) = await update_response(
+            list(history_deques[chat_channel.id]),
+            messages,
+            updated_response,
+            processed_new_messages,
+        )
+        messages.extend(processed_new_messages)
+        history_deques[chat_channel.id].extend(processed_new_messages)
 
-        if updated_should_respond and updated_response:
-            for ai_message in updated_response:
-                await chat_channel.send(ai_message.content)
-                history_deques[chat_channel.id].append(ai_message)
+        await respond(updated_should_send, prev_response)
 
-    else:
-        if should_respond and response:
-            for ai_message in response:
-                await chat_channel.send(ai_message.content)
-                history_deques[chat_channel.id].append(ai_message)
+    await respond(updated_should_respond, updated_response)
 
     processing_scheduled[chat_channel.id] = False
 
